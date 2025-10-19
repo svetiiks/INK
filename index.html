@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Room Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .info {
+      margin-bottom: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+    .floor {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+      gap: 6px;
+    }
+    .room {
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 12px;
+      color: white;
+      border: 2px solid #444;
+      border-radius: 3px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s;
+    }
+    .room:hover {
+      transform: scale(1.1);
+    }
+    .free { background-color: #4CAF50; }
+    .occupied { background-color: #F44336; }
+  </style>
+</head>
+<body>
+
+  <div class="info">🟢 Green — free | 🔴 Red — occupied</div>
+
+  <div class="floor" id="floor10"></div>
+  <div class="floor" id="floor20"></div>
+  <div class="floor" id="floor30"></div>
+  <div class="floor" id="floor40"></div>
+  <div class="floor" id="floor50"></div>
+  <div class="floor" id="floor60"></div>
+
+  <!-- Firebase SDK (без пробелов!) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <script>
+    // === ВАША КОНФИГУРАЦИЯ FIREBASE ===
+const firebaseConfig = {
+  apiKey: "AIzaSyDFmpUAkPLxuxsvi-bCrUWoAozx6EYL89U",
+  authDomain: "ink-hotel-359de.firebaseapp.com",
+  projectId: "ink-hotel-359de",
+  storageBucket: "ink-hotel-359de.firebasestorage.app",
+  messagingSenderId: "637988741703",
+  appId: "1:637988741703:web:a512791b9ace070c81c762",
+  databaseURL: "https://ink-hotel-359de-default-rtdb.firebaseio.com/"
+};
+
+    // Инициализация Firebase (совместимый режим)
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const roomsRef = db.ref('rooms');
+
+    // Все номера
+    const floors = [
+      { id: 'floor10', rooms: Array.from({length: 10}, (_, i) => 10 + i) },
+      { id: 'floor20', rooms: Array.from({length: 10}, (_, i) => 20 + i) },
+      { id: 'floor30', rooms: Array.from({length: 10}, (_, i) => 30 + i) },
+      { id: 'floor40', rooms: Array.from({length: 10}, (_, i) => 40 + i) },
+      { id: 'floor50', rooms: Array.from({length: 10}, (_, i) => 50 + i) },
+      { id: 'floor60', rooms: [60, 61] }
+    ];
+
+    // Загрузка состояния из Firebase
+    async function loadRoomStates() {
+      return new Promise((resolve) => {
+        roomsRef.once('value', (snapshot) => {
+          resolve(snapshot.val() || {});
+        });
+      });
+    }
+
+    // Создание комнат
+    async function createRooms() {
+      const states = await loadRoomStates();
+
+      floors.forEach(floor => {
+        const container = document.getElementById(floor.id);
+        container.innerHTML = '';
+
+        floor.rooms.forEach(roomNum => {
+          const room = document.createElement('div');
+          room.className = 'room';
+          room.textContent = roomNum;
+          room.dataset.room = roomNum;
+
+          if (states[roomNum] === 'occupied') {
+            room.classList.add('occupied');
+          } else {
+            room.classList.add('free');
+          }
+
+          room.addEventListener('click', () => {
+            room.classList.toggle('free');
+            room.classList.toggle('occupied');
+            const newStatus = room.classList.contains('occupied') ? 'occupied' : 'free';
+            roomsRef.child(roomNum).set(newStatus);
+          });
+
+          container.appendChild(room);
+        });
+      });
+    }
+
+    // Запуск приложения
+    createRooms();
+  </script>
+</body>
+</html>
