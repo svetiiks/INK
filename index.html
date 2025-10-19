@@ -552,10 +552,16 @@
     });
 
     // === ИНИЦИАЛИЗАЦИЯ ===
-    (async () => {
-      await createRooms();
-      workers.forEach(w => showInitialScreen(w));
-    })();
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await createRooms();
+    workers.forEach(w => showInitialScreen(w));
+  } catch (e) {
+    console.error("Init failed:", e);
+    alert("Failed to initialize app. Check console.");
+  }
+});
   </script>
 </body>
 </html>
+
