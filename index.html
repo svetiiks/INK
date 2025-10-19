@@ -4,6 +4,105 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hotel Manager — Rooms & Cleaning</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+       body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    /* Вкладки */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #ddd;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+    }
+    .tab-btn.active {
+      background: #2c3e50;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Карта номеров */
+    .room-map .info {
+      margin-bottom: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      text-align: center;
+    }
+    .floor {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+      gap: 6px;
+    }
+    .room {
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 12px;
+      color: white;
+      border: 2px solid #444;
+      border-radius: 3px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s;
+    }
+    .room:hover {
+      transform: scale(1.1);
+    }
+    .free { background-color: #4CAF50; }
+    .occupied { background-color: #F44336; }
+
+    /* Уборка */
+    .worker-section {
+      max-width: 700px;
+      margin: 0 auto 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #2c3e50;
+      text-align: center;
+    }
+    .date-display {
+      text-align: center;
+      color: #666;
+      font-style: italic;<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Manager — Rooms & Cleaning</title>
   <!-- Firebase SDK (без пробелов!) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -254,6 +353,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const roomsRef = db.ref('rooms');
+    const cleaningRef = db.ref('cleaning');
 
     // === ВКЛАДКИ ===
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -285,35 +385,11 @@
     ];
 
     const today = new Date().toLocaleDateString('en-GB');
-    let globalSelectedRooms = new Set();
-
-    // === ЗАГРУЗКА СОСТОЯНИЯ ===
-    async function loadRoomStates() {
-      return new Promise((resolve) => {
-        roomsRef.once('value', (snapshot) => {
-          const data = snapshot.val() || {};
-          Object.keys(data).forEach(room => {
-            if (data[room] === 'occupied') {
-              globalSelectedRooms.add(Number(room));
-            }
-          });
-          resolve(data);
-        });
-      });
-    }
-
-    // === СОХРАНЕНИЕ ВСЕХ НОМЕРОВ ===
-    function saveAllRooms() {
-      const roomsObj = {};
-      globalSelectedRooms.forEach(room => {
-        roomsObj[room] = 'occupied';
-      });
-      roomsRef.set(roomsObj);
-    }
 
     // === КАРТА НОМЕРОВ ===
     async function createRooms() {
-      const states = await loadRoomStates();
+      const snapshot = await roomsRef.once('value');
+      const states = snapshot.val() || {};
       floors.forEach(floor => {
         const container = document.getElementById(floor.id);
         container.innerHTML = '';
@@ -332,16 +408,8 @@
           room.addEventListener('click', () => {
             room.classList.toggle('free');
             room.classList.toggle('occupied');
-            const isOccupied = room.classList.contains('occupied');
-            if (isOccupied) {
-              globalSelectedRooms.add(roomNum);
-            } else {
-              globalSelectedRooms.delete(roomNum);
-            }
-            saveAllRooms();
-            if (document.getElementById('cleaning').classList.contains('active')) {
-              updateAllWorkerSelections();
-            }
+            const newStatus = room.classList.contains('occupied') ? 'occupied' : 'free';
+            roomsRef.child(roomNum).set(newStatus);
           });
 
           container.appendChild(room);
@@ -349,18 +417,8 @@
       });
     }
 
-    // === УБОРКА: РАБОТНИКИ ===
-    const workers = [1, 2, 3, 4].map(id => ({
-      id,
-      content: document.getElementById(`content-${id}`),
-      dateDisplay: document.getElementById(`date-display-${id}`),
-      name: '',
-      tasks: []
-    }));
-
-    workers.forEach(w => w.dateDisplay.textContent = `Date: ${today}`);
-
-    function createRoomSelect(workerId, currentValue = '') {
+    // === УБОРКА: ФУНКЦИИ ===
+    function createRoomSelectForCleaning(currentValue = '') {
       const select = document.createElement('select');
       select.className = 'room-select';
       select.innerHTML = '<option value="">—</option>';
@@ -368,9 +426,6 @@
         const opt = document.createElement('option');
         opt.value = room;
         opt.textContent = room;
-        if (globalSelectedRooms.has(room) && String(room) !== currentValue) {
-          opt.disabled = true;
-        }
         if (String(room) === currentValue) {
           opt.selected = true;
         }
@@ -379,30 +434,9 @@
       return select;
     }
 
-    function updateAllWorkerSelections() {
-      workers.forEach(w => {
-        const selects = w.content.querySelectorAll('.room-select');
-        selects.forEach(sel => {
-          const val = sel.value;
-          const newSel = createRoomSelect(w.id, val);
-          sel.replaceWith(newSel);
-          newSel.addEventListener('change', () => {
-            globalSelectedRooms.clear();
-            workers.forEach(w2 => {
-              w2.content.querySelectorAll('.room-select').forEach(s => {
-                if (s.value) globalSelectedRooms.add(Number(s.value));
-              });
-            });
-            saveAllRooms();
-            createRooms(); // обновить карту
-          });
-        });
-      });
-    }
-
     function showInitialScreen(worker) {
       worker.content.innerHTML = `
-        <input type="text" id="workerName-${worker.id}" placeholder="Enter worker name" maxlength="30">
+        <input type="text" id="workerName-${worker.id}" placeholder="Enter worker name" maxlength="30" value="${worker.name || ''}">
         <h3>Assign Rooms</h3>
         <table>
           <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th></tr></thead>
@@ -412,14 +446,18 @@
       `;
 
       const tbody = document.getElementById(`tableBody-${worker.id}`);
-      for (let i = 0; i < 15; i++) {
+      const tasks = worker.tasks || [];
+      const rowCount = Math.max(15, tasks.length);
+
+      for (let i = 0; i < rowCount; i++) {
+        const task = tasks[i] || { room: '', checkout: false, garim: false };
         const row = document.createElement('tr');
         row.innerHTML = `
           <td></td>
-          <td><input type="checkbox" class="checkout"></td>
-          <td><input type="checkbox" class="garim"></td>
+          <td><input type="checkbox" class="checkout" ${task.checkout ? 'checked' : ''}></td>
+          <td><input type="checkbox" class="garim" ${task.garim ? 'checked' : ''}></td>
         `;
-        const select = createRoomSelect(worker.id);
+        const select = createRoomSelectForCleaning(task.room);
         row.cells[0].appendChild(select);
         tbody.appendChild(row);
 
@@ -427,74 +465,62 @@
         const ga = row.querySelector('.garim');
         co.addEventListener('change', () => { if (co.checked) ga.checked = false; });
         ga.addEventListener('change', () => { if (ga.checked) co.checked = false; });
-        select.addEventListener('change', () => {
-          globalSelectedRooms.clear();
-          workers.forEach(w => {
-            w.content.querySelectorAll('.room-select').forEach(s => {
-              if (s.value) globalSelectedRooms.add(Number(s.value));
-            });
-          });
-          saveAllRooms();
-          createRooms();
-        });
       }
 
       document.getElementById(`startBtn-${worker.id}`).addEventListener('click', () => validateAndStart(worker));
     }
 
-   function showResultScreen(worker, filledRows) {
-  worker.tasks = filledRows;
+    function showResultScreen(worker, filledRows) {
+      worker.tasks = filledRows;
+      cleaningRef.child(`worker${worker.id}`).set({
+        name: worker.name,
+        date: today,
+        tasks: filledRows
+      });
 
-  // Добавляем все назначенные комнаты в globalSelectedRooms
-  filledRows.forEach(task => {
-    globalSelectedRooms.add(Number(task.room));
-  });
+      let rowsHtml = '';
+      filledRows.forEach(item => {
+        rowsHtml += `
+          <tr>
+            <td>${item.room}</td>
+            <td>${item.checkout ? '✅' : ''}</td>
+            <td>${item.garim ? '✅' : ''}</td>
+            <td><input type="checkbox" class="done-check"></td>
+          </tr>
+        `;
+      });
 
-  // Сохраняем в Firebase
-  saveAllRooms();
+      worker.content.innerHTML = `
+        <h3>Active Tasks for: ${worker.name}</h3>
+        <table>
+          <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th><th>Done</th></tr></thead>
+          <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
+        </table>
+        <button id="finishBtn-${worker.id}" style="display:none;">Finish Work</button>
+        <button onclick="resetWorker(${worker.id})">Reset</button>
+      `;
 
-  let rowsHtml = '';
-  filledRows.forEach(item => {
-    rowsHtml += `
-      <tr>
-        <td>${item.room}</td>
-        <td>${item.checkout ? '✅' : ''}</td>
-        <td>${item.garim ? '✅' : ''}</td>
-        <td><input type="checkbox" class="done-check"></td>
-      </tr>
-    `;
-  });
+      function checkFinish() {
+        const allDone = Array.from(worker.content.querySelectorAll('.done-check')).every(cb => cb.checked);
+        document.getElementById(`finishBtn-${worker.id}`).style.display = allDone ? 'block' : 'none';
+      }
 
-  worker.content.innerHTML = `
-    <h3>Active Tasks for: ${worker.name}</h3>
-    <table>
-      <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th><th>Done</th></tr></thead>
-      <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
-    </table>
-    <button id="finishBtn-${worker.id}" style="display:none;">Finish Work</button>
-    <button onclick="resetWorker(${worker.id})">Reset</button>
-  `;
+      worker.content.querySelector(`#resultBody-${worker.id}`).addEventListener('change', (e) => {
+        if (e.target.classList.contains('done-check')) checkFinish();
+      });
 
-  function checkFinish() {
-    const allDone = Array.from(worker.content.querySelectorAll('.done-check')).every(cb => cb.checked);
-    document.getElementById(`finishBtn-${worker.id}`).style.display = allDone ? 'block' : 'none';
-  }
+      document.getElementById(`finishBtn-${worker.id}`).addEventListener('click', () => {
+        document.getElementById('pdfWorkerName').textContent = `Work completed for: ${worker.name}. Save PDF report?`;
+        window.currentPdfWorker = worker;
+        document.getElementById('pdfModal').style.display = 'block';
+      });
 
-  worker.content.querySelector(`#resultBody-${worker.id}`).addEventListener('change', (e) => {
-    if (e.target.classList.contains('done-check')) checkFinish();
-  });
-
-  document.getElementById(`finishBtn-${worker.id}`).addEventListener('click', () => {
-    document.getElementById('pdfWorkerName').textContent = `Work completed for: ${worker.name}. Save PDF report?`;
-    window.currentPdfWorker = worker;
-    document.getElementById('pdfModal').style.display = 'block';
-  });
-
-  checkFinish();
-}
+      checkFinish();
+    }
 
     function validateAndStart(worker) {
-      const name = document.getElementById(`workerName-${worker.id}`).value.trim();
+      const nameInput = document.getElementById(`workerName-${worker.id}`);
+      const name = nameInput.value.trim();
       if (!name) { alert('Enter worker name!'); return; }
 
       const filledRows = [];
@@ -502,7 +528,9 @@
         const room = row.querySelector('.room-select').value;
         const co = row.querySelector('.checkout').checked;
         const ga = row.querySelector('.garim').checked;
-        if (room && (co || ga)) filledRows.push({ room, checkout: co, garim: ga });
+        if (room && (co || ga)) {
+          filledRows.push({ room, checkout: co, garim: ga });
+        }
       });
 
       if (filledRows.length === 0) { alert('Assign at least one room!'); return; }
@@ -511,20 +539,13 @@
       showResultScreen(worker, filledRows);
     }
 
-  window.resetWorker = function(id) {
-  const worker = workers.find(w => w.id === id);
-  if (!worker) return;
-
-  // Удаляем все назначенные комнаты из globalSelectedRooms
-  worker.tasks.forEach(t => {
-    globalSelectedRooms.delete(Number(t.room));
-  });
-  worker.name = '';
-  worker.tasks = [];
-
-  saveAllRooms();
-  showInitialScreen(worker);
-  createRooms();
+    window.resetWorker = function(id) {
+      const worker = workers.find(w => w.id === id);
+      if (!worker) return;
+      worker.name = '';
+      worker.tasks = [];
+      cleaningRef.child(`worker${id}`).remove();
+      showInitialScreen(worker);
     };
 
     function generateAndDownloadPDF(worker) {
@@ -564,17 +585,34 @@
     });
 
     // === ИНИЦИАЛИЗАЦИЯ ===
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    await createRooms();
-    workers.forEach(w => showInitialScreen(w));
-  } catch (e) {
-    console.error("Init failed:", e);
-    alert("Failed to initialize app. Check console.");
-  }
-});
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Карта номеров
+      await createRooms();
+
+      // Загрузка данных уборки
+      const cleaningSnapshot = await cleaningRef.once('value');
+      const cleaningData = cleaningSnapshot.val() || {};
+
+      const workers = [1, 2, 3, 4].map(id => {
+        const saved = cleaningData[`worker${id}`] || {};
+        return {
+          id,
+          content: document.getElementById(`content-${id}`),
+          dateDisplay: document.getElementById(`date-display-${id}`),
+          name: saved.name || '',
+          tasks: saved.tasks || []
+        };
+      });
+
+      workers.forEach(w => {
+        if (w.dateDisplay) w.dateDisplay.textContent = `Date: ${today}`;
+        showInitialScreen(w);
+      });
+
+      // Сохраняем workers в глобальную область для resetWorker
+      window.workers = workers;
+    });
   </script>
 </body>
 </html>
-
 
