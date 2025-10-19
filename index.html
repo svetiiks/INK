@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hotel Manager — Rooms & Cleaning</title>
+  <title>Hotel Manager</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <style>
@@ -12,6 +12,33 @@
       margin: 0;
       padding: 20px;
       background: #f5f5f5;
+    }
+
+    #login-screen {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    #login-screen input {
+      padding: 12px;
+      font-size: 16px;
+      width: 250px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    #login-screen button {
+      padding: 12px 30px;
+      font-size: 16px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #login-error {
+      color: red;
+      margin-top: 10px;
+      display: none;
     }
 
     .tabs {
@@ -44,7 +71,6 @@
       display: block;
     }
 
-    /* Карта номеров */
     .room-map .info {
       margin-bottom: 20px;
       font-size: 16px;
@@ -79,7 +105,6 @@
     .free { background-color: #4CAF50; }
     .occupied { background-color: #F44336; }
 
-    /* Уборка / Починка */
     .worker-section, .repair-section {
       max-width: 700px;
       margin: 0 auto 20px;
@@ -146,7 +171,6 @@
       cursor: not-allowed;
     }
 
-    /* Completed */
     .completed-job {
       border: 1px solid #ccc;
       padding: 15px;
@@ -170,86 +194,114 @@
 </head>
 <body>
 
-  <!-- Вкладки -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="map">Карта номеров</button>
-    <button class="tab-btn" data-tab="cleaning">Назначение уборки</button>
-    <button class="tab-btn" data-tab="repair">Починка комнат</button>
-    <button class="tab-btn" data-tab="completed">Завершённые работы</button>
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <h2>Hotel Staff Access</h2>
+    <p>Enter the shared password to continue</p>
+    <input type="password" id="password-input" placeholder="Password" />
+    <br>
+    <button onclick="checkPassword()">Login</button>
+    <p id="login-error">Incorrect password</p>
   </div>
 
-  <!-- Карта номеров -->
-  <div id="map" class="tab-content room-map active">
-    <div class="info">🟢 Green — free | 🔴 Red — occupied</div>
-    <div class="floor" id="floor10"></div>
-    <div class="floor" id="floor20"></div>
-    <div class="floor" id="floor30"></div>
-    <div class="floor" id="floor40"></div>
-    <div class="floor" id="floor50"></div>
-    <div class="floor" id="floor60"></div>
-  </div>
+  <!-- Main App (hidden until login) -->
+  <div id="main-app" style="display:none;">
 
-  <!-- Назначение уборки -->
-  <div id="cleaning" class="tab-content">
-    <!-- worker1–4 (оставлено без изменений) -->
-    <div class="worker-section" id="worker1-container">
-      <h2>Worker 1</h2>
-      <div class="date-display" id="date-display-1"></div>
-      <div class="content" id="content-1">Loading...</div>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="map">Room Map</button>
+      <button class="tab-btn" data-tab="cleaning">Cleaning Assignment</button>
+      <button class="tab-btn" data-tab="repair">Room Repairs</button>
+      <button class="tab-btn" data-tab="completed">Completed Jobs</button>
     </div>
-    <div class="worker-section" id="worker2-container">
-      <h2>Worker 2</h2>
-      <div class="date-display" id="date-display-2"></div>
-      <div class="content" id="content-2">Loading...</div>
-    </div>
-    <div class="worker-section" id="worker3-container">
-      <h2>Worker 3</h2>
-      <div class="date-display" id="date-display-3"></div>
-      <div class="content" id="content-3">Loading...</div>
-    </div>
-    <div class="worker-section" id="worker4-container">
-      <h2>Worker 4</h2>
-      <div class="date-display" id="date-display-4"></div>
-      <div class="content" id="content-4">Loading...</div>
-    </div>
-  </div>
 
-  <!-- Починка комнат -->
-  <div id="repair" class="tab-content">
-    <div class="repair-section" id="repair1-container">
-      <h2>Repair 1</h2>
-      <div class="date-display" id="repair-date-1"></div>
-      <div class="content" id="repair-content-1">Loading...</div>
+    <!-- Room Map -->
+    <div id="map" class="tab-content room-map active">
+      <div class="info">🟢 Green — free | 🔴 Red — occupied</div>
+      <div class="floor" id="floor10"></div>
+      <div class="floor" id="floor20"></div>
+      <div class="floor" id="floor30"></div>
+      <div class="floor" id="floor40"></div>
+      <div class="floor" id="floor50"></div>
+      <div class="floor" id="floor60"></div>
     </div>
-    <div class="repair-section" id="repair2-container">
-      <h2>Repair 2</h2>
-      <div class="date-display" id="repair-date-2"></div>
-      <div class="content" id="repair-content-2">Loading...</div>
-    </div>
-    <div class="repair-section" id="repair3-container">
-      <h2>Repair 3</h2>
-      <div class="date-display" id="repair-date-3"></div>
-      <div class="content" id="repair-content-3">Loading...</div>
-    </div>
-    <div class="repair-section" id="repair4-container">
-      <h2>Repair 4</h2>
-      <div class="date-display" id="repair-date-4"></div>
-      <div class="content" id="repair-content-4">Loading...</div>
-    </div>
-    <div class="repair-section" id="repair5-container">
-      <h2>Repair 5</h2>
-      <div class="date-display" id="repair-date-5"></div>
-      <div class="content" id="repair-content-5">Loading...</div>
-    </div>
-  </div>
 
-  <!-- Завершённые работы -->
-  <div id="completed" class="tab-content">
-    <h2>Завершённые работы</h2>
-    <div id="completed-list">Загрузка...</div>
+    <!-- Cleaning Assignment -->
+    <div id="cleaning" class="tab-content">
+      <div class="worker-section" id="worker1-container">
+        <h2>Worker 1</h2>
+        <div class="date-display" id="date-display-1"></div>
+        <div class="content" id="content-1">Loading...</div>
+      </div>
+      <div class="worker-section" id="worker2-container">
+        <h2>Worker 2</h2>
+        <div class="date-display" id="date-display-2"></div>
+        <div class="content" id="content-2">Loading...</div>
+      </div>
+      <div class="worker-section" id="worker3-container">
+        <h2>Worker 3</h2>
+        <div class="date-display" id="date-display-3"></div>
+        <div class="content" id="content-3">Loading...</div>
+      </div>
+      <div class="worker-section" id="worker4-container">
+        <h2>Worker 4</h2>
+        <div class="date-display" id="date-display-4"></div>
+        <div class="content" id="content-4">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Room Repairs -->
+    <div id="repair" class="tab-content">
+      <div class="repair-section" id="repair1-container">
+        <h2>Repair 1</h2>
+        <div class="date-display" id="repair-date-1"></div>
+        <div class="content" id="repair-content-1">Loading...</div>
+      </div>
+      <div class="repair-section" id="repair2-container">
+        <h2>Repair 2</h2>
+        <div class="date-display" id="repair-date-2"></div>
+        <div class="content" id="repair-content-2">Loading...</div>
+      </div>
+      <div class="repair-section" id="repair3-container">
+        <h2>Repair 3</h2>
+        <div class="date-display" id="repair-date-3"></div>
+        <div class="content" id="repair-content-3">Loading...</div>
+      </div>
+      <div class="repair-section" id="repair4-container">
+        <h2>Repair 4</h2>
+        <div class="date-display" id="repair-date-4"></div>
+        <div class="content" id="repair-content-4">Loading...</div>
+      </div>
+      <div class="repair-section" id="repair5-container">
+        <h2>Repair 5</h2>
+        <div class="date-display" id="repair-date-5"></div>
+        <div class="content" id="repair-content-5">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Completed Jobs -->
+    <div id="completed" class="tab-content">
+      <h2>Completed Jobs</h2>
+      <div id="completed-list">Loading...</div>
+    </div>
+
   </div>
 
   <script>
+    // === PASSWORD PROTECTION ===
+    const SHARED_PASSWORD = "hotel2025";
+
+    function checkPassword() {
+      const input = document.getElementById('password-input').value;
+      if (input === SHARED_PASSWORD) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        initApp();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    }
+
     // === FIREBASE CONFIG ===
     const firebaseConfig = {
       apiKey: "AIzaSyDFmpUAkPLxuxsvi-bCrUWoAozx6EYL89U",
@@ -268,19 +320,21 @@
     const repairRef = db.ref('repair');
     const completedRef = db.ref('completed');
 
-    // === ВКЛАДКИ ===
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
+    // === TABS ===
+    function setupTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(btn.dataset.tab).classList.add('active');
 
-        if (btn.dataset.tab === 'completed') {
-          loadCompletedJobs();
-        }
+          if (btn.dataset.tab === 'completed') {
+            loadCompletedJobs();
+          }
+        });
       });
-    });
+    }
 
     const ALL_ROOMS = [
       10,11,12,13,14,15,16,17,18,19,
@@ -302,7 +356,7 @@
 
     const today = new Date().toLocaleDateString('en-GB');
 
-    // === КАРТА НОМЕРОВ ===
+    // === ROOM MAP ===
     async function createRooms() {
       const snapshot = await roomsRef.once('value');
       const states = snapshot.val() || {};
@@ -329,7 +383,7 @@
       });
     }
 
-    // === УБОРКА (оставлена без изменений) ===
+    // === CLEANING ===
     function createRoomSelectForCleaning(currentValue = '') {
       const select = document.createElement('select');
       select.className = 'room-select';
@@ -349,7 +403,7 @@
         <input type="text" id="workerName-${worker.id}" placeholder="Enter worker name" maxlength="30" value="${worker.name || ''}">
         <h3>Assign Rooms</h3>
         <table>
-          <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th></tr></thead>
+          <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th></tr></thead>
           <tbody id="tableBody-${worker.id}"></tbody>
         </table>
         <button id="startBtn-${worker.id}">Start</button>
@@ -423,7 +477,7 @@
       worker.content.innerHTML = `
         <h3>Active Tasks for: ${worker.name}</h3>
         <table>
-          <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th><th>Done</th></tr></thead>
+          <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th><th>Done</th></tr></thead>
           <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
         </table>
         <button id="finishBtn-${worker.id}" style="display:none;">Finish Work</button>
@@ -464,7 +518,7 @@
       showInitialScreen(worker);
     };
 
-    // === ПОЧИНКА КОМНАТ ===
+    // === REPAIRS ===
     function createRoomSelectForRepair(currentValue = '') {
       const select = document.createElement('select');
       select.className = 'room-select';
@@ -591,14 +645,14 @@
       showRepairInitialScreen(repair);
     };
 
-    // === ЗАВЕРШЁННЫЕ РАБОТЫ ===
+    // === COMPLETED JOBS ===
     async function loadCompletedJobs() {
       const listEl = document.getElementById('completed-list');
       const snapshot = await completedRef.once('value');
       const data = snapshot.val() || {};
 
       if (Object.keys(data).length === 0) {
-        listEl.innerHTML = '<p>Нет завершённых заданий</p>';
+        listEl.innerHTML = '<p>No completed jobs</p>';
         return;
       }
 
@@ -609,7 +663,7 @@
           tasksHtml = job.tasks.map(t => `<li>Room ${t.room} — ${t.description}</li>`).join('');
         } else {
           tasksHtml = job.tasks.map(t => {
-            const action = t.checkout ? 'Checkout' : 'Garim';
+            const action = t.checkout ? 'Checkout' : 'Turnover';
             return `<li>Room ${t.room} — ${action}</li>`;
           }).join('');
         }
@@ -618,10 +672,10 @@
           <div class="completed-job" data-job-id="${jobId}">
             <div class="job-header">
               <div>
-                <strong>${job.workerName}</strong> — ${job.date} (${job.type === 'repair' ? 'Починка' : 'Уборка'})
+                <strong>${job.workerName}</strong> — ${job.date} (${job.type === 'repair' ? 'Repair' : 'Cleaning'})
               </div>
               <div class="job-actions">
-                <button onclick="deleteCompletedJob('${jobId}')">Удалить</button>
+                <button onclick="deleteCompletedJob('${jobId}')">Delete</button>
               </div>
             </div>
             <ul>${tasksHtml}</ul>
@@ -633,57 +687,61 @@
     }
 
     window.deleteCompletedJob = function(jobId) {
-      if (confirm('Удалить это задание?')) {
+      if (confirm('Delete this job?')) {
         completedRef.child(jobId).remove().then(() => {
           loadCompletedJobs();
         });
       }
     };
 
-    // === ИНИЦИАЛИЗАЦИЯ ===
-    document.addEventListener('DOMContentLoaded', async () => {
-      await createRooms();
+    // === INIT APP ===
+    function initApp() {
+      setupTabs();
 
-      // Уборка
-      const cleaningSnapshot = await cleaningRef.once('value');
-      const cleaningData = cleaningSnapshot.val() || {};
-      window.workers = [1, 2, 3, 4].map(id => {
-        const saved = cleaningData[`worker${id}`] || {};
-        return {
-          id,
-          content: document.getElementById(`content-${id}`),
-          dateDisplay: document.getElementById(`date-display-${id}`),
-          name: saved.name || '',
-          tasks: saved.tasks || []
-        };
-      });
-      window.workers.forEach(w => {
-        if (w.dateDisplay) w.dateDisplay.textContent = `Date: ${today}`;
-        showInitialScreen(w);
+      // Room Map
+      createRooms();
+
+      // Cleaning
+      cleaningRef.once('value').then(snapshot => {
+        const cleaningData = snapshot.val() || {};
+        window.workers = [1, 2, 3, 4].map(id => {
+          const saved = cleaningData[`worker${id}`] || {};
+          return {
+            id,
+            content: document.getElementById(`content-${id}`),
+            dateDisplay: document.getElementById(`date-display-${id}`),
+            name: saved.name || '',
+            tasks: saved.tasks || []
+          };
+        });
+        window.workers.forEach(w => {
+          if (w.dateDisplay) w.dateDisplay.textContent = `Date: ${today}`;
+          showInitialScreen(w);
+        });
       });
 
-      // Починка
-      const repairSnapshot = await repairRef.once('value');
-      const repairData = repairSnapshot.val() || {};
-      window.repairs = [1, 2, 3, 4, 5].map(id => {
-        const saved = repairData[`repair${id}`] || {};
-        return {
-          id,
-          content: document.getElementById(`repair-content-${id}`),
-          dateDisplay: document.getElementById(`repair-date-${id}`),
-          name: saved.name || '',
-          tasks: saved.tasks || []
-        };
+      // Repairs
+      repairRef.once('value').then(snapshot => {
+        const repairData = snapshot.val() || {};
+        window.repairs = [1, 2, 3, 4, 5].map(id => {
+          const saved = repairData[`repair${id}`] || {};
+          return {
+            id,
+            content: document.getElementById(`repair-content-${id}`),
+            dateDisplay: document.getElementById(`repair-date-${id}`),
+            name: saved.name || '',
+            tasks: saved.tasks || []
+          };
+        });
+        window.repairs.forEach(r => {
+          if (r.dateDisplay) r.dateDisplay.textContent = `Date: ${today}`;
+          showRepairInitialScreen(r);
+        });
       });
-      window.repairs.forEach(r => {
-        if (r.dateDisplay) r.dateDisplay.textContent = `Date: ${today}`;
-        showRepairInitialScreen(r);
-      });
-    });
+    }
   </script>
 </body>
 </html>
-
 
 
 
