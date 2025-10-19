@@ -439,42 +439,41 @@
       showInitialScreen(worker);
     };
 
-    // === ЗАВЕРШЁННЫЕ РАБОТЫ ===
-    async function loadCompletedJobs() {
-      const listEl = document.getElementById('completed-list');
-      const snapshot = await completedRef.once('value');
-      const data = snapshot.val() || {};
+   // === ЗАВЕРШЁННЫЕ РАБОТЫ (только кнопка "Удалить") ===
+async function loadCompletedJobs() {
+  const listEl = document.getElementById('completed-list');
+  const snapshot = await completedRef.once('value');
+  const data = snapshot.val() || {};
 
-      if (Object.keys(data).length === 0) {
-        listEl.innerHTML = '<p>Нет завершённых заданий</p>';
-        return;
-      }
+  if (Object.keys(data).length === 0) {
+    listEl.innerHTML = '<p>Нет завершённых заданий</p>';
+    return;
+  }
 
-      let html = '';
-      Object.entries(data).forEach(([jobId, job]) => {
-        const tasksHtml = job.tasks.map(t => {
-          const action = t.checkout ? 'Checkout' : 'Garim';
-          return `<li>Room ${t.room} — ${action}</li>`;
-        }).join('');
+  let html = '';
+  Object.entries(data).forEach(([jobId, job]) => {
+    const tasksHtml = job.tasks.map(t => {
+      const action = t.checkout ? 'Checkout' : 'Garim';
+      return `<li>Room ${t.room} — ${action}</li>`;
+    }).join('');
 
-        html += `
-          <div class="completed-job" data-job-id="${jobId}">
-            <div class="job-header">
-              <div>
-                <strong>${job.workerName}</strong> — ${job.date}
-              </div>
-              <div class="job-actions">
-                <button onclick="downloadCompletedJob('${jobId}', ${JSON.stringify(job).replace(/'/g, "\\'")})">Скачать</button>
-                <button onclick="deleteCompletedJob('${jobId}')">Удалить</button>
-              </div>
-            </div>
-            <ul>${tasksHtml}</ul>
+    html += `
+      <div class="completed-job" data-job-id="${jobId}">
+        <div class="job-header">
+          <div>
+            <strong>${job.workerName}</strong> — ${job.date}
           </div>
-        `;
-      });
+          <div class="job-actions">
+            <button onclick="deleteCompletedJob('${jobId}')">Удалить</button>
+          </div>
+        </div>
+        <ul>${tasksHtml}</ul>
+      </div>
+    `;
+  });
 
-      listEl.innerHTML = html;
-    }
+  listEl.innerHTML = html;
+}
 
     window.downloadCompletedJob = function(jobId, job) {
       const { jsPDF } = window.jspdf;
@@ -534,4 +533,5 @@
   </script>
 </body>
 </html>
+
 
