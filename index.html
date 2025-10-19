@@ -442,47 +442,56 @@
       document.getElementById(`startBtn-${worker.id}`).addEventListener('click', () => validateAndStart(worker));
     }
 
-    function showResultScreen(worker, filledRows) {
-      worker.tasks = filledRows;
-      let rowsHtml = '';
-      filledRows.forEach(item => {
-        rowsHtml += `
-          <tr>
-            <td>${item.room}</td>
-            <td>${item.checkout ? '✅' : ''}</td>
-            <td>${item.garim ? '✅' : ''}</td>
-            <td><input type="checkbox" class="done-check"></td>
-          </tr>
-        `;
-      });
+   function showResultScreen(worker, filledRows) {
+  worker.tasks = filledRows;
 
-      worker.content.innerHTML = `
-        <h3>Active Tasks for: ${worker.name}</h3>
-        <table>
-          <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th><th>Done</th></tr></thead>
-          <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
-        </table>
-        <button id="finishBtn-${worker.id}" style="display:none;">Finish Work</button>
-        <button onclick="resetWorker(${worker.id})">Reset</button>
-      `;
+  // Добавляем все назначенные комнаты в globalSelectedRooms
+  filledRows.forEach(task => {
+    globalSelectedRooms.add(Number(task.room));
+  });
 
-      function checkFinish() {
-        const allDone = Array.from(worker.content.querySelectorAll('.done-check')).every(cb => cb.checked);
-        document.getElementById(`finishBtn-${worker.id}`).style.display = allDone ? 'block' : 'none';
-      }
+  // Сохраняем в Firebase
+  saveAllRooms();
 
-      worker.content.querySelector(`#resultBody-${worker.id}`).addEventListener('change', (e) => {
-        if (e.target.classList.contains('done-check')) checkFinish();
-      });
+  let rowsHtml = '';
+  filledRows.forEach(item => {
+    rowsHtml += `
+      <tr>
+        <td>${item.room}</td>
+        <td>${item.checkout ? '✅' : ''}</td>
+        <td>${item.garim ? '✅' : ''}</td>
+        <td><input type="checkbox" class="done-check"></td>
+      </tr>
+    `;
+  });
 
-      document.getElementById(`finishBtn-${worker.id}`).addEventListener('click', () => {
-        document.getElementById('pdfWorkerName').textContent = `Work completed for: ${worker.name}. Save PDF report?`;
-        window.currentPdfWorker = worker;
-        document.getElementById('pdfModal').style.display = 'block';
-      });
+  worker.content.innerHTML = `
+    <h3>Active Tasks for: ${worker.name}</h3>
+    <table>
+      <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th><th>Done</th></tr></thead>
+      <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
+    </table>
+    <button id="finishBtn-${worker.id}" style="display:none;">Finish Work</button>
+    <button onclick="resetWorker(${worker.id})">Reset</button>
+  `;
 
-      checkFinish();
-    }
+  function checkFinish() {
+    const allDone = Array.from(worker.content.querySelectorAll('.done-check')).every(cb => cb.checked);
+    document.getElementById(`finishBtn-${worker.id}`).style.display = allDone ? 'block' : 'none';
+  }
+
+  worker.content.querySelector(`#resultBody-${worker.id}`).addEventListener('change', (e) => {
+    if (e.target.classList.contains('done-check')) checkFinish();
+  });
+
+  document.getElementById(`finishBtn-${worker.id}`).addEventListener('click', () => {
+    document.getElementById('pdfWorkerName').textContent = `Work completed for: ${worker.name}. Save PDF report?`;
+    window.currentPdfWorker = worker;
+    document.getElementById('pdfModal').style.display = 'block';
+  });
+
+  checkFinish();
+}
 
     function validateAndStart(worker) {
       const name = document.getElementById(`workerName-${worker.id}`).value.trim();
@@ -502,17 +511,20 @@
       showResultScreen(worker, filledRows);
     }
 
-    window.resetWorker = function(id) {
-      const worker = workers.find(w => w.id === id);
-      if (!worker) return;
+  window.resetWorker = function(id) {
+  const worker = workers.find(w => w.id === id);
+  if (!worker) return;
 
-      worker.tasks.forEach(t => globalSelectedRooms.delete(Number(t.room)));
-      worker.name = '';
-      worker.tasks = [];
+  // Удаляем все назначенные комнаты из globalSelectedRooms
+  worker.tasks.forEach(t => {
+    globalSelectedRooms.delete(Number(t.room));
+  });
+  worker.name = '';
+  worker.tasks = [];
 
-      saveAllRooms();
-      showInitialScreen(worker);
-      createRooms();
+  saveAllRooms();
+  showInitialScreen(worker);
+  createRooms();
     };
 
     function generateAndDownloadPDF(worker) {
@@ -564,4 +576,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   </script>
 </body>
 </html>
+
 
