@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hotel Manager — Rooms & Cleaning</title>
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -219,7 +219,7 @@
   </div>
 
   <script>
-    // === FIREBASE CONFIG ===
+    // === FIREBASE CONFIGURATION ===
     const firebaseConfig = {
       apiKey: "AIzaSyDFmpUAkPLxuxsvi-bCrUWoAozx6EYL89U",
       authDomain: "ink-hotel-359de.firebaseapp.com",
@@ -230,6 +230,7 @@
       appId: "1:637988741703:web:77e9778ce61a8ff081c762"
     };
 
+    // Инициализация Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const roomsRef = db.ref('rooms');
@@ -244,7 +245,6 @@
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
 
-        // При открытии вкладки "Завершённые" — загружаем данные
         if (btn.dataset.tab === 'completed') {
           loadCompletedJobs();
         }
@@ -392,7 +392,6 @@
       checkFinish();
 
       finishBtn.addEventListener('click', () => {
-        // Сохраняем в "completed"
         const jobId = Date.now().toString();
         const jobData = {
           workerName: worker.name,
@@ -401,11 +400,7 @@
           timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         completedRef.child(jobId).set(jobData);
-
-        // Сбрасываем работника
         resetWorker(worker.id);
-
-        // Переходим на вкладку "Завершённые"
         document.querySelector('.tab-btn[data-tab="completed"]').click();
       });
     }
@@ -439,69 +434,45 @@
       showInitialScreen(worker);
     };
 
-   // === ЗАВЕРШЁННЫЕ РАБОТЫ (только кнопка "Удалить") ===
-async function loadCompletedJobs() {
-  const listEl = document.getElementById('completed-list');
-  const snapshot = await completedRef.once('value');
-  const data = snapshot.val() || {};
+    // === ЗАВЕРШЁННЫЕ РАБОТЫ (только кнопка "Удалить") ===
+    async function loadCompletedJobs() {
+      const listEl = document.getElementById('completed-list');
+      const snapshot = await completedRef.once('value');
+      const data = snapshot.val() || {};
 
-  if (Object.keys(data).length === 0) {
-    listEl.innerHTML = '<p>Нет завершённых заданий</p>';
-    return;
-  }
+      if (Object.keys(data).length === 0) {
+        listEl.innerHTML = '<p>Нет завершённых заданий</p>';
+        return;
+      }
 
-  let html = '';
-  Object.entries(data).forEach(([jobId, job]) => {
-    const tasksHtml = job.tasks.map(t => {
-      const action = t.checkout ? 'Checkout' : 'Garim';
-      return `<li>Room ${t.room} — ${action}</li>`;
-    }).join('');
+      let html = '';
+      Object.entries(data).forEach(([jobId, job]) => {
+        const tasksHtml = job.tasks.map(t => {
+          const action = t.checkout ? 'Checkout' : 'Garim';
+          return `<li>Room ${t.room} — ${action}</li>`;
+        }).join('');
 
-    html += `
-      <div class="completed-job" data-job-id="${jobId}">
-        <div class="job-header">
-          <div>
-            <strong>${job.workerName}</strong> — ${job.date}
+        html += `
+          <div class="completed-job" data-job-id="${jobId}">
+            <div class="job-header">
+              <div>
+                <strong>${job.workerName}</strong> — ${job.date}
+              </div>
+              <div class="job-actions">
+                <button onclick="deleteCompletedJob('${jobId}')">Удалить</button>
+              </div>
+            </div>
+            <ul>${tasksHtml}</ul>
           </div>
-          <div class="job-actions">
-            <button onclick="deleteCompletedJob('${jobId}')">Удалить</button>
-          </div>
-        </div>
-        <ul>${tasksHtml}</ul>
-      </div>
-    `;
-  });
-
-  listEl.innerHTML = html;
-}
-
-    window.downloadCompletedJob = function(jobId, job) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      let y = 20;
-      doc.setFontSize(18);
-      doc.text('Hotel Work Report', 14, y);
-      y += 12;
-      doc.setFontSize(12);
-      doc.text(`Worker: ${job.workerName}`, 14, y);
-      y += 8;
-      doc.text(`Date: ${job.date}`, 14, y);
-      y += 12;
-      doc.text('Completed Tasks', 14, y);
-      y += 8;
-      job.tasks.forEach(task => {
-        const action = task.checkout ? 'Checkout' : 'Garim';
-        doc.text(`Room ${task.room} — ${action}`, 14, y);
-        y += 7;
-        if (y > 280) { doc.addPage(); y = 20; }
+        `;
       });
-      doc.save(`report-${job.workerName.replace(/\s+/g, '-')}-${job.date.replace(/\//g, '-')}.pdf`);
-    };
+
+      listEl.innerHTML = html;
+    }
 
     window.deleteCompletedJob = function(jobId) {
       if (confirm('Удалить это задание?')) {
         completedRef.child(jobId).remove().then(() => {
-          // Обновляем список
           loadCompletedJobs();
         });
       }
@@ -533,5 +504,8 @@ async function loadCompletedJobs() {
   </script>
 </body>
 </html>
+</body>
+</html>
+
 
 
