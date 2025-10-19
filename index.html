@@ -204,10 +204,9 @@
     <p id="login-error">Incorrect password</p>
   </div>
 
-  <!-- Main App (hidden until login) -->
+  <!-- Main App -->
   <div id="main-app" style="display:none;">
 
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="map">Room Map</button>
       <button class="tab-btn" data-tab="cleaning">Cleaning Assignment</button>
@@ -226,7 +225,7 @@
       <div class="floor" id="floor60"></div>
     </div>
 
-    <!-- Cleaning Assignment -->
+    <!-- Cleaning -->
     <div id="cleaning" class="tab-content">
       <div class="worker-section" id="worker1-container">
         <h2>Worker 1</h2>
@@ -250,7 +249,7 @@
       </div>
     </div>
 
-    <!-- Room Repairs -->
+    <!-- Repairs -->
     <div id="repair" class="tab-content">
       <div class="repair-section" id="repair1-container">
         <h2>Repair 1</h2>
@@ -279,7 +278,7 @@
       </div>
     </div>
 
-    <!-- Completed Jobs -->
+    <!-- Completed -->
     <div id="completed" class="tab-content">
       <h2>Completed Jobs</h2>
       <div id="completed-list">Loading...</div>
@@ -288,7 +287,7 @@
   </div>
 
   <script>
-    // === PASSWORD PROTECTION ===
+    // === PASSWORD ===
     const SHARED_PASSWORD = "hotel2025";
 
     function checkPassword() {
@@ -302,7 +301,7 @@
       }
     }
 
-    // === FIREBASE CONFIG ===
+    // === FIREBASE ===
     const firebaseConfig = {
       apiKey: "AIzaSyDFmpUAkPLxuxsvi-bCrUWoAozx6EYL89U",
       authDomain: "ink-hotel-359de.firebaseapp.com",
@@ -336,15 +335,7 @@
       });
     }
 
-    const ALL_ROOMS = [
-      10,11,12,13,14,15,16,17,18,19,
-      20,21,22,23,24,25,26,27,28,29,
-      30,31,32,33,34,35,36,37,38,39,
-      40,41,42,43,44,45,46,47,48,49,
-      50,51,52,53,54,55,56,57,58,59,
-      60,61
-    ];
-
+    const ALL_ROOMS = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61];
     const floors = [
       { id: 'floor10', rooms: Array.from({length: 10}, (_, i) => 10 + i) },
       { id: 'floor20', rooms: Array.from({length: 10}, (_, i) => 20 + i) },
@@ -353,7 +344,6 @@
       { id: 'floor50', rooms: Array.from({length: 10}, (_, i) => 50 + i) },
       { id: 'floor60', rooms: [60, 61] }
     ];
-
     const today = new Date().toLocaleDateString('en-GB');
 
     // === ROOM MAP ===
@@ -406,7 +396,7 @@
           <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th></tr></thead>
           <tbody id="tableBody-${worker.id}"></tbody>
         </table>
-        <button id="startBtn-${worker.id}">Start</button>
+        <button onclick="resetWorker(${worker.id})">Reset</button>
       `;
 
       const tbody = document.getElementById(`tableBody-${worker.id}`);
@@ -430,28 +420,6 @@
         co.addEventListener('change', () => { if (co.checked) ga.checked = false; });
         ga.addEventListener('change', () => { if (ga.checked) co.checked = false; });
       }
-
-      document.getElementById(`startBtn-${worker.id}`).addEventListener('click', () => validateAndStart(worker));
-    }
-
-    function validateAndStart(worker) {
-      const name = document.getElementById(`workerName-${worker.id}`).value.trim();
-      if (!name) { alert('Enter worker name!'); return; }
-
-      const filledRows = [];
-      document.querySelectorAll(`#tableBody-${worker.id} tr`).forEach(row => {
-        const room = row.querySelector('.room-select').value;
-        const co = row.querySelector('.checkout').checked;
-        const ga = row.querySelector('.garim').checked;
-        if (room && (co || ga)) {
-          filledRows.push({ room, checkout: co, garim: ga });
-        }
-      });
-
-      if (filledRows.length === 0) { alert('Assign at least one room!'); return; }
-
-      worker.name = name;
-      showResultScreen(worker, filledRows);
     }
 
     function showResultScreen(worker, filledRows) {
@@ -480,32 +448,24 @@
           <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th><th>Done</th></tr></thead>
           <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
         </table>
-        <button id="finishBtn-${worker.id}" style="display:none;">Finish Work</button>
         <button onclick="resetWorker(${worker.id})">Reset</button>
       `;
 
-      const finishBtn = document.getElementById(`finishBtn-${worker.id}`);
       const checkboxes = worker.content.querySelectorAll('.done-check');
-
-      function checkFinish() {
-        const allDone = Array.from(checkboxes).every(cb => cb.checked);
-        finishBtn.style.display = allDone ? 'block' : 'none';
-      }
-
-      checkboxes.forEach(cb => cb.addEventListener('change', checkFinish));
-      checkFinish();
-
-      finishBtn.addEventListener('click', () => {
-        const jobId = Date.now().toString();
-        completedRef.child(jobId).set({
-          workerName: worker.name,
-          date: today,
-          tasks: filledRows,
-          type: 'cleaning',
-          timestamp: firebase.database.ServerValue.TIMESTAMP
+      checkboxes.forEach((cb, index) => {
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            const task = filledRows[index];
+            completedRef.push().set({
+              workerName: worker.name,
+              date: today,
+              room: task.room,
+              type: 'cleaning',
+              action: task.checkout ? 'Checkout' : 'Turnover',
+              timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+          }
         });
-        resetWorker(worker.id);
-        document.querySelector('.tab-btn[data-tab="completed"]').click();
       });
     }
 
@@ -541,7 +501,7 @@
           <thead><tr><th>Room</th><th>Task Description</th></tr></thead>
           <tbody id="repairTableBody-${repair.id}"></tbody>
         </table>
-        <button id="repairStartBtn-${repair.id}">Start</button>
+        <button onclick="resetRepair(${repair.id})">Reset</button>
       `;
 
       const tbody = document.getElementById(`repairTableBody-${repair.id}`);
@@ -559,27 +519,6 @@
         row.cells[0].appendChild(select);
         tbody.appendChild(row);
       }
-
-      document.getElementById(`repairStartBtn-${repair.id}`).addEventListener('click', () => validateAndStartRepair(repair));
-    }
-
-    function validateAndStartRepair(repair) {
-      const name = document.getElementById(`repairName-${repair.id}`).value.trim();
-      if (!name) { alert('Enter worker name!'); return; }
-
-      const filledRows = [];
-      document.querySelectorAll(`#repairTableBody-${repair.id} tr`).forEach(row => {
-        const room = row.querySelector('.room-select').value;
-        const desc = row.querySelector('.task-input').value.trim();
-        if (room && desc) {
-          filledRows.push({ room, description: desc });
-        }
-      });
-
-      if (filledRows.length === 0) { alert('Assign at least one task!'); return; }
-
-      repair.name = name;
-      showRepairResultScreen(repair, filledRows);
     }
 
     function showRepairResultScreen(repair, filledRows) {
@@ -607,32 +546,24 @@
           <thead><tr><th>Room</th><th>Task</th><th>Done</th></tr></thead>
           <tbody id="repairResultBody-${repair.id}">${rowsHtml}</tbody>
         </table>
-        <button id="repairFinishBtn-${repair.id}" style="display:none;">Finish Work</button>
         <button onclick="resetRepair(${repair.id})">Reset</button>
       `;
 
-      const finishBtn = document.getElementById(`repairFinishBtn-${repair.id}`);
       const checkboxes = repair.content.querySelectorAll('.done-check');
-
-      function checkFinish() {
-        const allDone = Array.from(checkboxes).every(cb => cb.checked);
-        finishBtn.style.display = allDone ? 'block' : 'none';
-      }
-
-      checkboxes.forEach(cb => cb.addEventListener('change', checkFinish));
-      checkFinish();
-
-      finishBtn.addEventListener('click', () => {
-        const jobId = Date.now().toString();
-        completedRef.child(jobId).set({
-          workerName: repair.name,
-          date: today,
-          tasks: filledRows,
-          type: 'repair',
-          timestamp: firebase.database.ServerValue.TIMESTAMP
+      checkboxes.forEach((cb, index) => {
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            const task = filledRows[index];
+            completedRef.push().set({
+              workerName: repair.name,
+              date: today,
+              room: task.room,
+              type: 'repair',
+              description: task.description,
+              timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+          }
         });
-        resetRepair(repair.id);
-        document.querySelector('.tab-btn[data-tab="completed"]').click();
       });
     }
 
@@ -658,27 +589,23 @@
 
       let html = '';
       Object.entries(data).forEach(([jobId, job]) => {
-        let tasksHtml = '';
+        let desc = '';
         if (job.type === 'repair') {
-          tasksHtml = job.tasks.map(t => `<li>Room ${t.room} — ${t.description}</li>`).join('');
+          desc = `Room ${job.room} — ${job.description}`;
         } else {
-          tasksHtml = job.tasks.map(t => {
-            const action = t.checkout ? 'Checkout' : 'Turnover';
-            return `<li>Room ${t.room} — ${action}</li>`;
-          }).join('');
+          desc = `Room ${job.room} — ${job.action}`;
         }
-
         html += `
           <div class="completed-job" data-job-id="${jobId}">
             <div class="job-header">
               <div>
-                <strong>${job.workerName}</strong> — ${job.date} (${job.type === 'repair' ? 'Repair' : 'Cleaning'})
+                <strong>${job.workerName}</strong> — ${job.date}
               </div>
               <div class="job-actions">
                 <button onclick="deleteCompletedJob('${jobId}')">Delete</button>
               </div>
             </div>
-            <ul>${tasksHtml}</ul>
+            <p>${desc}</p>
           </div>
         `;
       });
@@ -694,14 +621,11 @@
       }
     };
 
-    // === INIT APP ===
+    // === INIT ===
     function initApp() {
       setupTabs();
-
-      // Room Map
       createRooms();
 
-      // Cleaning
       cleaningRef.once('value').then(snapshot => {
         const cleaningData = snapshot.val() || {};
         window.workers = [1, 2, 3, 4].map(id => {
@@ -720,7 +644,6 @@
         });
       });
 
-      // Repairs
       repairRef.once('value').then(snapshot => {
         const repairData = snapshot.val() || {};
         window.repairs = [1, 2, 3, 4, 5].map(id => {
@@ -739,9 +662,56 @@
         });
       });
     }
+
+    // Start assignment
+    document.querySelectorAll('.tab-btn[data-tab="cleaning"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!window.cleaningStarted) {
+          window.workers.forEach(w => {
+            const nameInput = document.getElementById(`workerName-${w.id}`);
+            if (nameInput && nameInput.value.trim()) {
+              const tasks = [];
+              document.querySelectorAll(`#tableBody-${w.id} tr`).forEach(row => {
+                const room = row.querySelector('.room-select')?.value;
+                const co = row.querySelector('.checkout')?.checked;
+                const ga = row.querySelector('.garim')?.checked;
+                if (room && (co || ga)) {
+                  tasks.push({ room, checkout: co, garim: ga });
+                }
+              });
+              if (tasks.length > 0) {
+                showResultScreen(w, tasks);
+              }
+            }
+          });
+          window.cleaningStarted = true;
+        }
+      });
+    });
+
+    document.querySelectorAll('.tab-btn[data-tab="repair"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!window.repairStarted) {
+          window.repairs.forEach(r => {
+            const nameInput = document.getElementById(`repairName-${r.id}`);
+            if (nameInput && nameInput.value.trim()) {
+              const tasks = [];
+              document.querySelectorAll(`#repairTableBody-${r.id} tr`).forEach(row => {
+                const room = row.querySelector('.room-select')?.value;
+                const desc = row.querySelector('.task-input')?.value?.trim();
+                if (room && desc) {
+                  tasks.push({ room, description: desc });
+                }
+              });
+              if (tasks.length > 0) {
+                showRepairResultScreen(r, tasks);
+              }
+            }
+          });
+          window.repairStarted = true;
+        }
+      });
+    });
   </script>
 </body>
 </html>
-
-
-
