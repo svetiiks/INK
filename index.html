@@ -291,15 +291,17 @@
     const SHARED_PASSWORD = "hotel2025";
 
     function checkPassword() {
-      const input = document.getElementById('password-input').value;
-      if (input === SHARED_PASSWORD) {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        initApp();
-      } else {
-        document.getElementById('login-error').style.display = 'block';
-      }
-    }
+  const input = document.getElementById('password-input').value;
+  if (input === SHARED_PASSWORD) {
+    // Сохраняем, что пользователь авторизован
+    localStorage.setItem('hotel_access_granted', 'true');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    initApp();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
 
     // === FIREBASE ===
     const firebaseConfig = {
@@ -477,22 +479,35 @@
       `;
 
       const checkboxes = worker.content.querySelectorAll('.done-check');
-      checkboxes.forEach((cb, index) => {
-        cb.addEventListener('change', () => {
-          if (cb.checked) {
-            const task = filledRows[index];
-            completedRef.push().set({
-              workerName: worker.name,
-              date: today,
-              room: task.room,
-              type: 'cleaning',
-              action: task.checkout ? 'Checkout' : 'Turnover',
-              timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-          }
-        });
+checkboxes.forEach((cb, index) => {
+  cb.addEventListener('change', () => {
+    if (cb.checked) {
+      const task = filledRows[index];
+      const key = `worker${worker.id}_${today.replace(/\//g, '-')}`;
+      
+      // Читаем текущие данные работника за сегодня
+      completedRef.child(key).once('value', (snapshot) => {
+        let current = snapshot.val() || {
+          workerName: worker.name,
+          date: today,
+          tasks: []
+        };
+        // Добавляем новую задачу, если её ещё нет
+        const exists = current.tasks.some(t => 
+          t.room === task.room && 
+          (t.action === (task.checkout ? 'Checkout' : 'Turnover') || t.description === task.description)
+        );
+        if (!exists) {
+          current.tasks.push({
+            room: task.room,
+            action: task.checkout ? 'Checkout' : 'Turnover'
+          });
+          completedRef.child(key).set(current);
+        }
       });
     }
+  });
+});
 
     window.resetWorker = function(id) {
       const worker = workers.find(w => w.id === id);
@@ -599,22 +614,32 @@
       `;
 
       const checkboxes = repair.content.querySelectorAll('.done-check');
-      checkboxes.forEach((cb, index) => {
-        cb.addEventListener('change', () => {
-          if (cb.checked) {
-            const task = filledRows[index];
-            completedRef.push().set({
-              workerName: repair.name,
-              date: today,
-              room: task.room,
-              type: 'repair',
-              description: task.description,
-              timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-          }
-        });
+checkboxes.forEach((cb, index) => {
+  cb.addEventListener('change', () => {
+    if (cb.checked) {
+      const task = filledRows[index];
+      const key = `repair${repair.id}_${today.replace(/\//g, '-')}`;
+      
+      completedRef.child(key).once('value', (snapshot) => {
+        let current = snapshot.val() || {
+          workerName: repair.name,
+          date: today,
+          tasks: []
+        };
+        const exists = current.tasks.some(t => 
+          t.room === task.room && t.description === task.description
+        );
+        if (!exists) {
+          current.tasks.push({
+            room: task.room,
+            description: task.description
+          });
+          completedRef.child(key).set(current);
+        }
       });
     }
+  });
+});
 
     window.resetRepair = function(id) {
       const repair = repairs.find(r => r.id === id);
@@ -626,50 +651,46 @@
     };
 
     // === COMPLETED JOBS ===
-    async function loadCompletedJobs() {
-      const listEl = document.getElementById('completed-list');
-      const snapshot = await completedRef.once('value');
-      const data = snapshot.val() || {};
+ async function loadCompletedJobs() {
+  const listEl = document.getElementById('completed-list');
+  const snapshot = await completedRef.once('value');
+  const data = snapshot.val() || {};
 
-      if (Object.keys(data).length === 0) {
-        listEl.innerHTML = '<p>No completed jobs</p>';
-        return;
-      }
+  if (Object.keys(data).length === 0) {
+    listEl.innerHTML = '<p>No completed jobs</p>';
+    return;
+  }
 
-      let html = '';
-      Object.entries(data).forEach(([jobId, job]) => {
-        let desc = '';
-        if (job.type === 'repair') {
-          desc = `Room ${job.room} — ${job.description}`;
-        } else {
-          desc = `Room ${job.room} — ${job.action}`;
-        }
-        html += `
-          <div class="completed-job" data-job-id="${jobId}">
-            <div class="job-header">
-              <div>
-                <strong>${job.workerName}</strong> — ${job.date}
-              </div>
-              <div class="job-actions">
-                <button onclick="deleteCompletedJob('${jobId}')">Delete</button>
-              </div>
-            </div>
-            <p>${desc}</p>
-          </div>
-        `;
-      });
+  let html = '';
+  Object.entries(data).forEach(([key, job]) => {
+    html += `
+      <div class="completed-job">
+        <div class="job-header">
+          <strong>${job.workerName}</strong> — ${job.date}
+        </div>
+        <ul>
+    `;
+    job.tasks.forEach(task => {
+      let desc = task.description || task.action;
+      html += `<li>Room ${task.room} — ${desc}</li>`;
+    });
+    html += `
+        </ul>
+        <button onclick="deleteCompletedJob('${key}')">Delete All</button>
+      </div>
+    `;
+  });
 
-      listEl.innerHTML = html;
-    }
+  listEl.innerHTML = html;
+}
 
-    window.deleteCompletedJob = function(jobId) {
-      if (confirm('Delete this job?')) {
-        completedRef.child(jobId).remove().then(() => {
-          loadCompletedJobs();
-        });
-      }
-    };
-
+    window.deleteCompletedJob = function(key) {
+  if (confirm('Delete all tasks for this worker on this date?')) {
+    completedRef.child(key).remove().then(() => {
+      loadCompletedJobs();
+    });
+  }
+}
     // === INIT ===
     function initApp() {
       setupTabs();
@@ -711,6 +732,13 @@
         });
       });
     }
+      // Автоматический вход, если уже авторизован
+if (localStorage.getItem('hotel_access_granted') === 'true') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  initApp();
+}
   </script>
 </body>
 </html>
+
