@@ -194,7 +194,7 @@
 </head>
 <body>
 
-  <!-- Login Screen -->
+  <!-- Login -->
   <div id="login-screen">
     <h2>Hotel Staff Access</h2>
     <p>Enter the shared password to continue</p>
@@ -396,6 +396,7 @@
           <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th></tr></thead>
           <tbody id="tableBody-${worker.id}"></tbody>
         </table>
+        <button id="startBtn-${worker.id}">Start</button>
         <button onclick="resetWorker(${worker.id})">Reset</button>
       `;
 
@@ -420,6 +421,30 @@
         co.addEventListener('change', () => { if (co.checked) ga.checked = false; });
         ga.addEventListener('change', () => { if (ga.checked) co.checked = false; });
       }
+
+      document.getElementById(`startBtn-${worker.id}`).addEventListener('click', () => {
+        validateAndStart(worker);
+      });
+    }
+
+    function validateAndStart(worker) {
+      const name = document.getElementById(`workerName-${worker.id}`).value.trim();
+      if (!name) { alert('Enter worker name!'); return; }
+
+      const filledRows = [];
+      document.querySelectorAll(`#tableBody-${worker.id} tr`).forEach(row => {
+        const room = row.querySelector('.room-select').value;
+        const co = row.querySelector('.checkout').checked;
+        const ga = row.querySelector('.garim').checked;
+        if (room && (co || ga)) {
+          filledRows.push({ room, checkout: co, garim: ga });
+        }
+      });
+
+      if (filledRows.length === 0) { alert('Assign at least one room!'); return; }
+
+      worker.name = name;
+      showResultScreen(worker, filledRows);
     }
 
     function showResultScreen(worker, filledRows) {
@@ -501,6 +526,7 @@
           <thead><tr><th>Room</th><th>Task Description</th></tr></thead>
           <tbody id="repairTableBody-${repair.id}"></tbody>
         </table>
+        <button id="repairStartBtn-${repair.id}">Start</button>
         <button onclick="resetRepair(${repair.id})">Reset</button>
       `;
 
@@ -519,6 +545,29 @@
         row.cells[0].appendChild(select);
         tbody.appendChild(row);
       }
+
+      document.getElementById(`repairStartBtn-${repair.id}`).addEventListener('click', () => {
+        validateAndStartRepair(repair);
+      });
+    }
+
+    function validateAndStartRepair(repair) {
+      const name = document.getElementById(`repairName-${repair.id}`).value.trim();
+      if (!name) { alert('Enter worker name!'); return; }
+
+      const filledRows = [];
+      document.querySelectorAll(`#repairTableBody-${repair.id} tr`).forEach(row => {
+        const room = row.querySelector('.room-select').value;
+        const desc = row.querySelector('.task-input').value.trim();
+        if (room && desc) {
+          filledRows.push({ room, description: desc });
+        }
+      });
+
+      if (filledRows.length === 0) { alert('Assign at least one task!'); return; }
+
+      repair.name = name;
+      showRepairResultScreen(repair, filledRows);
     }
 
     function showRepairResultScreen(repair, filledRows) {
@@ -662,56 +711,6 @@
         });
       });
     }
-
-    // Start assignment
-    document.querySelectorAll('.tab-btn[data-tab="cleaning"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (!window.cleaningStarted) {
-          window.workers.forEach(w => {
-            const nameInput = document.getElementById(`workerName-${w.id}`);
-            if (nameInput && nameInput.value.trim()) {
-              const tasks = [];
-              document.querySelectorAll(`#tableBody-${w.id} tr`).forEach(row => {
-                const room = row.querySelector('.room-select')?.value;
-                const co = row.querySelector('.checkout')?.checked;
-                const ga = row.querySelector('.garim')?.checked;
-                if (room && (co || ga)) {
-                  tasks.push({ room, checkout: co, garim: ga });
-                }
-              });
-              if (tasks.length > 0) {
-                showResultScreen(w, tasks);
-              }
-            }
-          });
-          window.cleaningStarted = true;
-        }
-      });
-    });
-
-    document.querySelectorAll('.tab-btn[data-tab="repair"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (!window.repairStarted) {
-          window.repairs.forEach(r => {
-            const nameInput = document.getElementById(`repairName-${r.id}`);
-            if (nameInput && nameInput.value.trim()) {
-              const tasks = [];
-              document.querySelectorAll(`#repairTableBody-${r.id} tr`).forEach(row => {
-                const room = row.querySelector('.room-select')?.value;
-                const desc = row.querySelector('.task-input')?.value?.trim();
-                if (room && desc) {
-                  tasks.push({ room, description: desc });
-                }
-              });
-              if (tasks.length > 0) {
-                showRepairResultScreen(r, tasks);
-              }
-            }
-          });
-          window.repairStarted = true;
-        }
-      });
-    });
   </script>
 </body>
 </html>
