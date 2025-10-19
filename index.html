@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6,107 +6,6 @@
   <title>Hotel Manager — Rooms & Cleaning</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-       body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-
-    /* Вкладки */
-    .tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .tab-btn {
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #ddd;
-      border: none;
-      cursor: pointer;
-      border-radius: 6px 6px 0 0;
-    }
-    .tab-btn.active {
-      background: #2c3e50;
-      color: white;
-    }
-
-    .tab-content {
-      display: none;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .tab-content.active {
-      display: block;
-    }
-
-    /* Карта номеров */
-    .room-map .info {
-      margin-bottom: 20px;
-      font-size: 16px;
-      font-weight: bold;
-      color: #333;
-      text-align: center;
-    }
-    .floor {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 10px;
-      gap: 6px;
-    }
-    .room {
-      width: 25px;
-      height: 25px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 12px;
-      color: white;
-      border: 2px solid #444;
-      border-radius: 3px;
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.1s;
-    }
-    .room:hover {
-      transform: scale(1.1);
-    }
-    .free { background-color: #4CAF50; }
-    .occupied { background-color: #F44336; }
-
-    /* Уборка */
-    .worker-section {
-      max-width: 700px;
-      margin: 0 auto 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 20px;
-    }
-    h2 {
-      margin-top: 0;
-      color: #2c3e50;
-      text-align: center;
-    }
-    .date-display {
-      text-align: center;
-      color: #666;
-      font-style: italic;<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hotel Manager — Rooms & Cleaning</title>
-  <!-- Firebase SDK (без пробелов!) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
@@ -116,7 +15,6 @@
       background: #f5f5f5;
     }
 
-    /* Вкладки */
     .tabs {
       display: flex;
       gap: 10px;
@@ -248,34 +146,25 @@
       cursor: not-allowed;
     }
 
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
+    /* Completed */
+    .completed-job {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      background: #f9f9f9;
     }
-    .modal-content {
-      background-color: white;
-      margin: 15% auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
     }
-    .modal-buttons {
-      margin-top: 20px;
-    }
-    .modal-buttons button {
+    .job-actions button {
       display: inline-block;
-      width: 48%;
-      margin: 0 1%;
-      padding: 10px;
+      padding: 6px 12px;
+      font-size: 14px;
+      margin: 0 5px;
     }
   </style>
 </head>
@@ -285,6 +174,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="map">Карта номеров</button>
     <button class="tab-btn" data-tab="cleaning">Назначение уборки</button>
+    <button class="tab-btn" data-tab="completed">Завершённые работы</button>
   </div>
 
   <!-- Карта номеров -->
@@ -305,19 +195,16 @@
       <div class="date-display" id="date-display-1"></div>
       <div class="content" id="content-1">Loading...</div>
     </div>
-
     <div class="worker-section" id="worker2-container">
       <h2>Worker 2</h2>
       <div class="date-display" id="date-display-2"></div>
       <div class="content" id="content-2">Loading...</div>
     </div>
-
     <div class="worker-section" id="worker3-container">
       <h2>Worker 3</h2>
       <div class="date-display" id="date-display-3"></div>
       <div class="content" id="content-3">Loading...</div>
     </div>
-
     <div class="worker-section" id="worker4-container">
       <h2>Worker 4</h2>
       <div class="date-display" id="date-display-4"></div>
@@ -325,20 +212,14 @@
     </div>
   </div>
 
-  <!-- Modal -->
-  <div id="pdfModal" class="modal">
-    <div class="modal-content">
-      <h3>Save Report?</h3>
-      <p id="pdfWorkerName"></p>
-      <div class="modal-buttons">
-        <button id="pdfYes">Yes</button>
-        <button id="pdfNo">No</button>
-      </div>
-    </div>
+  <!-- Завершённые работы -->
+  <div id="completed" class="tab-content">
+    <h2>Завершённые работы</h2>
+    <div id="completed-list">Загрузка...</div>
   </div>
 
   <script>
-    // === FIREBASE CONFIGURATION ===
+    // === FIREBASE CONFIG ===
     const firebaseConfig = {
       apiKey: "AIzaSyDFmpUAkPLxuxsvi-bCrUWoAozx6EYL89U",
       authDomain: "ink-hotel-359de.firebaseapp.com",
@@ -349,11 +230,11 @@
       appId: "1:637988741703:web:77e9778ce61a8ff081c762"
     };
 
-    // Инициализация Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const roomsRef = db.ref('rooms');
     const cleaningRef = db.ref('cleaning');
+    const completedRef = db.ref('completed');
 
     // === ВКЛАДКИ ===
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -362,6 +243,11 @@
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
+
+        // При открытии вкладки "Завершённые" — загружаем данные
+        if (btn.dataset.tab === 'completed') {
+          loadCompletedJobs();
+        }
       });
     });
 
@@ -397,27 +283,23 @@
           const room = document.createElement('div');
           room.className = 'room';
           room.textContent = roomNum;
-          room.dataset.room = roomNum;
-
           if (states[roomNum] === 'occupied') {
             room.classList.add('occupied');
           } else {
             room.classList.add('free');
           }
-
           room.addEventListener('click', () => {
             room.classList.toggle('free');
             room.classList.toggle('occupied');
             const newStatus = room.classList.contains('occupied') ? 'occupied' : 'free';
             roomsRef.child(roomNum).set(newStatus);
           });
-
           container.appendChild(room);
         });
       });
     }
 
-    // === УБОРКА: ФУНКЦИИ ===
+    // === УБОРКА ===
     function createRoomSelectForCleaning(currentValue = '') {
       const select = document.createElement('select');
       select.className = 'room-select';
@@ -426,9 +308,7 @@
         const opt = document.createElement('option');
         opt.value = room;
         opt.textContent = room;
-        if (String(room) === currentValue) {
-          opt.selected = true;
-        }
+        if (String(room) === currentValue) opt.selected = true;
         select.appendChild(opt);
       });
       return select;
@@ -500,27 +380,38 @@
         <button onclick="resetWorker(${worker.id})">Reset</button>
       `;
 
+      const finishBtn = document.getElementById(`finishBtn-${worker.id}`);
+      const checkboxes = worker.content.querySelectorAll('.done-check');
+
       function checkFinish() {
-        const allDone = Array.from(worker.content.querySelectorAll('.done-check')).every(cb => cb.checked);
-        document.getElementById(`finishBtn-${worker.id}`).style.display = allDone ? 'block' : 'none';
+        const allDone = Array.from(checkboxes).every(cb => cb.checked);
+        finishBtn.style.display = allDone ? 'block' : 'none';
       }
 
-      worker.content.querySelector(`#resultBody-${worker.id}`).addEventListener('change', (e) => {
-        if (e.target.classList.contains('done-check')) checkFinish();
-      });
-
-      document.getElementById(`finishBtn-${worker.id}`).addEventListener('click', () => {
-        document.getElementById('pdfWorkerName').textContent = `Work completed for: ${worker.name}. Save PDF report?`;
-        window.currentPdfWorker = worker;
-        document.getElementById('pdfModal').style.display = 'block';
-      });
-
+      checkboxes.forEach(cb => cb.addEventListener('change', checkFinish));
       checkFinish();
+
+      finishBtn.addEventListener('click', () => {
+        // Сохраняем в "completed"
+        const jobId = Date.now().toString();
+        const jobData = {
+          workerName: worker.name,
+          date: today,
+          tasks: filledRows,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        completedRef.child(jobId).set(jobData);
+
+        // Сбрасываем работника
+        resetWorker(worker.id);
+
+        // Переходим на вкладку "Завершённые"
+        document.querySelector('.tab-btn[data-tab="completed"]').click();
+      });
     }
 
     function validateAndStart(worker) {
-      const nameInput = document.getElementById(`workerName-${worker.id}`);
-      const name = nameInput.value.trim();
+      const name = document.getElementById(`workerName-${worker.id}`).value.trim();
       if (!name) { alert('Enter worker name!'); return; }
 
       const filledRows = [];
@@ -548,7 +439,44 @@
       showInitialScreen(worker);
     };
 
-    function generateAndDownloadPDF(worker) {
+    // === ЗАВЕРШЁННЫЕ РАБОТЫ ===
+    async function loadCompletedJobs() {
+      const listEl = document.getElementById('completed-list');
+      const snapshot = await completedRef.once('value');
+      const data = snapshot.val() || {};
+
+      if (Object.keys(data).length === 0) {
+        listEl.innerHTML = '<p>Нет завершённых заданий</p>';
+        return;
+      }
+
+      let html = '';
+      Object.entries(data).forEach(([jobId, job]) => {
+        const tasksHtml = job.tasks.map(t => {
+          const action = t.checkout ? 'Checkout' : 'Garim';
+          return `<li>Room ${t.room} — ${action}</li>`;
+        }).join('');
+
+        html += `
+          <div class="completed-job" data-job-id="${jobId}">
+            <div class="job-header">
+              <div>
+                <strong>${job.workerName}</strong> — ${job.date}
+              </div>
+              <div class="job-actions">
+                <button onclick="downloadCompletedJob('${jobId}', ${JSON.stringify(job).replace(/'/g, "\\'")})">Скачать</button>
+                <button onclick="deleteCompletedJob('${jobId}')">Удалить</button>
+              </div>
+            </div>
+            <ul>${tasksHtml}</ul>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
+    }
+
+    window.downloadCompletedJob = function(jobId, job) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       let y = 20;
@@ -556,44 +484,38 @@
       doc.text('Hotel Work Report', 14, y);
       y += 12;
       doc.setFontSize(12);
-      doc.text(`Worker: ${worker.name}`, 14, y);
+      doc.text(`Worker: ${job.workerName}`, 14, y);
       y += 8;
-      doc.text(`Date: ${today}`, 14, y);
+      doc.text(`Date: ${job.date}`, 14, y);
       y += 12;
       doc.text('Completed Tasks', 14, y);
       y += 8;
-      worker.tasks.forEach(task => {
+      job.tasks.forEach(task => {
         const action = task.checkout ? 'Checkout' : 'Garim';
         doc.text(`Room ${task.room} — ${action}`, 14, y);
         y += 7;
         if (y > 280) { doc.addPage(); y = 20; }
       });
-      const filename = `report-${worker.name.replace(/\s+/g, '-')}-${today.replace(/\//g, '-')}.pdf`;
-      doc.save(filename);
-      window.resetWorker(worker.id);
-    }
+      doc.save(`report-${job.workerName.replace(/\s+/g, '-')}-${job.date.replace(/\//g, '-')}.pdf`);
+    };
 
-    document.getElementById('pdfYes').addEventListener('click', () => {
-      if (window.currentPdfWorker) generateAndDownloadPDF(window.currentPdfWorker);
-      document.getElementById('pdfModal').style.display = 'none';
-      window.currentPdfWorker = null;
-    });
-
-    document.getElementById('pdfNo').addEventListener('click', () => {
-      document.getElementById('pdfModal').style.display = 'none';
-      window.currentPdfWorker = null;
-    });
+    window.deleteCompletedJob = function(jobId) {
+      if (confirm('Удалить это задание?')) {
+        completedRef.child(jobId).remove().then(() => {
+          // Обновляем список
+          loadCompletedJobs();
+        });
+      }
+    };
 
     // === ИНИЦИАЛИЗАЦИЯ ===
     document.addEventListener('DOMContentLoaded', async () => {
-      // Карта номеров
       await createRooms();
 
-      // Загрузка данных уборки
       const cleaningSnapshot = await cleaningRef.once('value');
       const cleaningData = cleaningSnapshot.val() || {};
 
-      const workers = [1, 2, 3, 4].map(id => {
+      window.workers = [1, 2, 3, 4].map(id => {
         const saved = cleaningData[`worker${id}`] || {};
         return {
           id,
@@ -604,13 +526,10 @@
         };
       });
 
-      workers.forEach(w => {
+      window.workers.forEach(w => {
         if (w.dateDisplay) w.dateDisplay.textContent = `Date: ${today}`;
         showInitialScreen(w);
       });
-
-      // Сохраняем workers в глобальную область для resetWorker
-      window.workers = workers;
     });
   </script>
 </body>
