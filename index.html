@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hotel Manager</title>
-  <!-- Firebase SDK (без пробелов!) -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <style>
@@ -191,6 +191,14 @@
       font-size: 14px;
       margin: 0 5px;
     }
+
+    /* Приоритеты */
+    .priority-high td {
+      background-color: #ffcdd2 !important;
+    }
+    .priority-normal td {
+      background-color: #c8e6c9 !important;
+    }
   </style>
 </head>
 <body>
@@ -303,7 +311,7 @@
       }
     }
 
-    // === FIREBASE CONFIG (без пробелов!) ===
+    // === FIREBASE CONFIG ===
     const firebaseConfig = {
       apiKey: "AIzaSyDFmpUAkPLxuxsvi-bCrUWoAozx6EYL89U",
       authDomain: "ink-hotel-359de.firebaseapp.com",
@@ -395,7 +403,7 @@
         <input type="text" id="workerName-${worker.id}" placeholder="Enter worker name" maxlength="30" value="${worker.name || ''}">
         <h3>Assign Rooms</h3>
         <table>
-          <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th></tr></thead>
+          <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th></tr></thead>
           <tbody id="tableBody-${worker.id}"></tbody>
         </table>
         <button id="startBtn-${worker.id}">Start</button>
@@ -407,7 +415,7 @@
       const rowCount = Math.max(15, tasks.length);
 
       for (let i = 0; i < rowCount; i++) {
-        const task = tasks[i] || { room: '', checkout: false, garim: false };
+        const task = tasks[i] || { room: '', checkout: false, garim: false, priority: null };
         const row = document.createElement('tr');
         row.innerHTML = `
           <td></td>
@@ -418,10 +426,30 @@
         row.cells[0].appendChild(select);
         tbody.appendChild(row);
 
+        // Восстановление цвета при загрузке
+        if (task.priority === 'high') row.classList.add('priority-high');
+        else if (task.priority === 'normal') row.classList.add('priority-normal');
+
+        // Взаимоисключающие чекбоксы
         const co = row.querySelector('.checkout');
         const ga = row.querySelector('.garim');
         co.addEventListener('change', () => { if (co.checked) ga.checked = false; });
         ga.addEventListener('change', () => { if (ga.checked) co.checked = false; });
+
+        // Переключение приоритета
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('input')) return;
+          row.classList.remove('priority-high', 'priority-normal');
+          if (!task.priority) {
+            task.priority = 'high';
+            row.classList.add('priority-high');
+          } else if (task.priority === 'high') {
+            task.priority = 'normal';
+            row.classList.add('priority-normal');
+          } else {
+            task.priority = null;
+          }
+        });
       }
 
       document.getElementById(`startBtn-${worker.id}`).addEventListener('click', () => {
@@ -429,17 +457,23 @@
       });
     }
 
+    // ✅ ИСПРАВЛЕНО: приоритет берётся из DOM
     function validateAndStart(worker) {
       const name = document.getElementById(`workerName-${worker.id}`).value.trim();
       if (!name) { alert('Enter worker name!'); return; }
 
       const filledRows = [];
-      document.querySelectorAll(`#tableBody-${worker.id} tr`).forEach(row => {
+      const rows = document.querySelectorAll(`#tableBody-${worker.id} tr`);
+      rows.forEach(row => {
         const room = row.querySelector('.room-select').value;
         const co = row.querySelector('.checkout').checked;
         const ga = row.querySelector('.garim').checked;
         if (room && (co || ga)) {
-          filledRows.push({ room, checkout: co, garim: ga });
+          let priority = null;
+          if (row.classList.contains('priority-high')) priority = 'high';
+          else if (row.classList.contains('priority-normal')) priority = 'normal';
+
+          filledRows.push({ room, checkout: co, garim: ga, priority });
         }
       });
 
@@ -459,8 +493,9 @@
 
       let rowsHtml = '';
       filledRows.forEach(item => {
+        const cls = item.priority === 'high' ? 'priority-high' : item.priority === 'normal' ? 'priority-normal' : '';
         rowsHtml += `
-          <tr>
+          <tr class="${cls}">
             <td>${item.room}</td>
             <td>${item.checkout ? '✅' : ''}</td>
             <td>${item.garim ? '✅' : ''}</td>
@@ -472,7 +507,7 @@
       worker.content.innerHTML = `
         <h3>Active Tasks for: ${worker.name}</h3>
         <table>
-          <thead><tr><th>Room</th><th>Checkout</th><th>Turnover</th><th>Done</th></tr></thead>
+          <thead><tr><th>Room</th><th>Checkout</th><th>Garim</th><th>Done</th></tr></thead>
           <tbody id="resultBody-${worker.id}">${rowsHtml}</tbody>
         </table>
         <button onclick="resetWorker(${worker.id})">Reset</button>
@@ -490,14 +525,12 @@
                 date: today,
                 tasks: []
               };
+              const action = task.checkout ? 'Checkout' : 'Garim';
               const exists = current.tasks.some(t => 
-                t.room === task.room && t.action === (task.checkout ? 'Checkout' : 'Turnover')
+                t.room === task.room && t.action === action
               );
               if (!exists) {
-                current.tasks.push({
-                  room: task.room,
-                  action: task.checkout ? 'Checkout' : 'Turnover'
-                });
+                current.tasks.push({ room: task.room, action });
                 completedRef.child(key).set(current);
               }
             });
@@ -547,7 +580,7 @@
       const rowCount = Math.max(10, tasks.length);
 
       for (let i = 0; i < rowCount; i++) {
-        const task = tasks[i] || { room: '', description: '' };
+        const task = tasks[i] || { room: '', description: '', priority: null };
         const row = document.createElement('tr');
         row.innerHTML = `
           <td></td>
@@ -556,6 +589,23 @@
         const select = createRoomSelectForRepair(task.room);
         row.cells[0].appendChild(select);
         tbody.appendChild(row);
+
+        if (task.priority === 'high') row.classList.add('priority-high');
+        else if (task.priority === 'normal') row.classList.add('priority-normal');
+
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('input')) return;
+          row.classList.remove('priority-high', 'priority-normal');
+          if (!task.priority) {
+            task.priority = 'high';
+            row.classList.add('priority-high');
+          } else if (task.priority === 'high') {
+            task.priority = 'normal';
+            row.classList.add('priority-normal');
+          } else {
+            task.priority = null;
+          }
+        });
       }
 
       document.getElementById(`repairStartBtn-${repair.id}`).addEventListener('click', () => {
@@ -563,16 +613,22 @@
       });
     }
 
+    // ✅ ИСПРАВЛЕНО: приоритет берётся из DOM
     function validateAndStartRepair(repair) {
       const name = document.getElementById(`repairName-${repair.id}`).value.trim();
       if (!name) { alert('Enter worker name!'); return; }
 
       const filledRows = [];
-      document.querySelectorAll(`#repairTableBody-${repair.id} tr`).forEach(row => {
+      const rows = document.querySelectorAll(`#repairTableBody-${repair.id} tr`);
+      rows.forEach(row => {
         const room = row.querySelector('.room-select').value;
         const desc = row.querySelector('.task-input').value.trim();
         if (room && desc) {
-          filledRows.push({ room, description: desc });
+          let priority = null;
+          if (row.classList.contains('priority-high')) priority = 'high';
+          else if (row.classList.contains('priority-normal')) priority = 'normal';
+
+          filledRows.push({ room, description: desc, priority });
         }
       });
 
@@ -592,8 +648,9 @@
 
       let rowsHtml = '';
       filledRows.forEach(item => {
+        const cls = item.priority === 'high' ? 'priority-high' : item.priority === 'normal' ? 'priority-normal' : '';
         rowsHtml += `
-          <tr>
+          <tr class="${cls}">
             <td>${item.room}</td>
             <td>${item.description}</td>
             <td><input type="checkbox" class="done-check"></td>
@@ -626,10 +683,7 @@
                 t.room === task.room && t.description === task.description
               );
               if (!exists) {
-                current.tasks.push({
-                  room: task.room,
-                  description: task.description
-                });
+                current.tasks.push({ room: task.room, description: task.description });
                 completedRef.child(key).set(current);
               }
             });
